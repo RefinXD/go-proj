@@ -3,7 +3,6 @@ up:
 
 down:
 	migrate -path database/migrations -database 'postgres://postgres:password@localhost:5432/postgres?sslmode=disable' -verbose down
-
 run:
 	go run main.go
 test:

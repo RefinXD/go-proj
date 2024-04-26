@@ -11,18 +11,28 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type EmployeeController struct {
-	empService service.EmployeeService
+type EmployeeController interface{
+	GetAllHandler(w http.ResponseWriter, r *http.Request)
+	GetHandler(w http.ResponseWriter, r *http.Request)
+	CreateHandler(w http.ResponseWriter, r *http.Request)
+	UpdateHandler(w http.ResponseWriter, r *http.Request) 
+	DeleteHandler(w http.ResponseWriter, r *http.Request)
+
 }
 
-func NewEmployeeController(service service.EmployeeService) EmployeeController {
-	return EmployeeController{
-		empService: service,
+
+type EmployeeControllerImpl struct {
+	EmpService service.EmployeeService
+}
+
+func NewEmployeeController(service service.EmployeeService) EmployeeControllerImpl {
+	return EmployeeControllerImpl{
+		EmpService: service,
 	}
 }
 
-func (e EmployeeController) GetAllHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.empService.GetAllEmployees(context.Background())
+func (e EmployeeControllerImpl) GetAllHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.EmpService.GetAllEmployees(context.Background())
 	if err != nil {
 		w.WriteHeader(500)
 		fmt.Fprintf(w,"Internal Server Error")
@@ -37,11 +47,11 @@ func (e EmployeeController) GetAllHandler(w http.ResponseWriter, r *http.Request
 	w.Write(empJson)
 }
 
-func (e EmployeeController) GetHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.empService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
+func (e EmployeeControllerImpl) GetHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.EmpService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil {
 		if(err.Error() == "no rows in result set"){
-			w.WriteHeader(400)
+			w.WriteHeader(404)
 			fmt.Fprintf(w,"User not found")
 		}else{
 			w.WriteHeader(500)
@@ -57,7 +67,7 @@ func (e EmployeeController) GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(empJson)
 }
-func (e EmployeeController) CreateHandler(w http.ResponseWriter, r *http.Request) {
+func (e EmployeeControllerImpl) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.EmployeeDTO
 	fmt.Println(r.Body)
 	decoder := json.NewDecoder(r.Body)
@@ -67,7 +77,7 @@ func (e EmployeeController) CreateHandler(w http.ResponseWriter, r *http.Request
 		fmt.Fprintf(w,"Bad Request")
 	}
 	fmt.Println(dto)
-	employee,err := e.empService.CreateEmployees(context.Background(), dto)
+	employee,err := e.EmpService.CreateEmployees(context.Background(), dto)
 	if err != nil {
 		w.WriteHeader(500)
 		fmt.Fprintf(w,"Internal Server Error")
@@ -82,7 +92,7 @@ func (e EmployeeController) CreateHandler(w http.ResponseWriter, r *http.Request
 
 }
 
-func (e EmployeeController) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+func (e EmployeeControllerImpl) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.EmployeeDTO
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&dto)
@@ -90,7 +100,7 @@ func (e EmployeeController) UpdateHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(400)
 		fmt.Fprintf(w,"Bad Request")
 	}
-	employee,err := e.empService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
+	employee,err := e.EmpService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
 	if err != nil {
 		if(err.Error() == "no rows in result set"){
 			w.WriteHeader(400)
@@ -114,8 +124,8 @@ func (e EmployeeController) UpdateHandler(w http.ResponseWriter, r *http.Request
 }
 
 
-func (e EmployeeController) DeleteHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.empService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
+func (e EmployeeControllerImpl) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.EmpService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil{
 		if(err.Error() == "no rows in result set"){
 			w.WriteHeader(400)
@@ -141,7 +151,7 @@ func (e EmployeeController) DeleteHandler(w http.ResponseWriter, r *http.Request
 
 
 
-func (e EmployeeController) SetRouter(r chi.Router) {
+func (e EmployeeControllerImpl) SetRouter(r chi.Router) {
 	r.Get("/employees", e.GetAllHandler)
 	r.Get("/employee/{id}",e.GetHandler)
 	r.Post("/employee", e.CreateHandler)

@@ -5,13 +5,12 @@ import (
 	"github.com/RefinXD/go-proj/service"
 	"github.com/go-chi/chi/v5"
 )
-
+//Initialize the router for all available paths
 func InitRouter() *chi.Mux {
-	api_router := chi.NewRouter()
-	//api_router.Get("/employees",controllers.EmployeeController.GetAllHandler)
+	router := chi.NewRouter()
 	empService := service.Instantiate()
     empHandler := controllers.NewEmployeeController(empService)
-	empHandler.SetRouter(api_router)
+	empHandler.SetRouter(router)
 
-	return api_router
+	return router
 }
