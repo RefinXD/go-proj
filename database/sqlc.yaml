@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "queries/employeeQuery.sql"
+    schema: "migrations"
+    gen:
+      go:
+        package: "employee_queries"
+        out: "employee_queries"
+        sql_package: "pgx/v5"
