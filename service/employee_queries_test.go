@@ -29,6 +29,9 @@ func (db MockTestDatabase) 	DeleteEmployee(ctx context.Context, id int64) error{
 func (db MockTestDatabase) 	GetEmployee(ctx context.Context, id int64) (employee_queries.Employee, error){
 	return *new(employee_queries.Employee),nil
 }
+func (db MockTestDatabase) 	GetEmployeeByName(ctx context.Context, name string) (employee_queries.Employee, error){
+	return *new(employee_queries.Employee),nil
+}
 func (db MockTestDatabase) 	ListEmployees(ctx context.Context) ([]employee_queries.Employee, error){
 	return *new([]employee_queries.Employee),nil
 }

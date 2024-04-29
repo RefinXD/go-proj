@@ -2,6 +2,10 @@
 SELECT * FROM employees
 WHERE id = $1 LIMIT 1;
 
+-- name: GetEmployeeByName :one
+SELECT * FROM employees
+WHERE name = $1 LIMIT 1;
+
 -- name: ListEmployees :many
 SELECT * FROM employees
 ORDER BY name;

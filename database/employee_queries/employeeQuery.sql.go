@@ -87,6 +87,29 @@ func (q *Queries) GetEmployee(ctx context.Context, id int64) (Employee, error) {
 	return i, err
 }
 
+const getEmployeeByName = `-- name: GetEmployeeByName :one
+SELECT id, name, dob, department, job_title, address, join_date, created_date, updated_date, deleted_date FROM employees
+WHERE name = $1 LIMIT 1
+`
+
+func (q *Queries) GetEmployeeByName(ctx context.Context, name string) (Employee, error) {
+	row := q.db.QueryRow(ctx, getEmployeeByName, name)
+	var i Employee
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Dob,
+		&i.Department,
+		&i.JobTitle,
+		&i.Address,
+		&i.JoinDate,
+		&i.CreatedDate,
+		&i.UpdatedDate,
+		&i.DeletedDate,
+	)
+	return i, err
+}
+
 const listEmployees = `-- name: ListEmployees :many
 SELECT id, name, dob, department, job_title, address, join_date, created_date, updated_date, deleted_date FROM employees
 ORDER BY name

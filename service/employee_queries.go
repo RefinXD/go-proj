@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -11,7 +12,9 @@ import (
 	"github.com/RefinXD/go-proj/database/employee_queries"
 	"github.com/RefinXD/go-proj/database/models"
 	"github.com/RefinXD/go-proj/utils"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type EmployeeService interface{
@@ -75,6 +78,22 @@ func (e EmployeeServiceImpl) GetEmployee(ctx context.Context,id string) (emps *m
 
 func (e EmployeeServiceImpl) CreateEmployees(ctx context.Context,data dto.EmployeeDTO) (emp *models.Employee,err error)  {
 	
+	validate := validator.New()
+
+
+	err = validate.Struct(data)
+	if err != nil {
+		// Validation errors
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, err := range validationErrors {
+				fmt.Println(err.Field(), err.Tag(), err.Param())
+			}
+			return nil,err
+		} else {
+			fmt.Println("Non-validation error:", err)
+			return nil,err
+	}
+}
 	employee,err := e.Db.CreateEmployee(ctx,employee_queries.CreateEmployeeParams{
 		Name: data.Name,
 		Dob: *utils.TimeToPgDate(&data.Dob),
@@ -85,7 +104,11 @@ func (e EmployeeServiceImpl) CreateEmployees(ctx context.Context,data dto.Employ
 		
 	})
 	if err != nil{
-		return nil,err
+		fmt.Println(err.Error())
+		var e *pgconn.PgError
+		if errors.As(err,&e) && e.Code == "23505"{
+			return nil,errors.New("duplicate name")
+		}
 	}
 	return utils.ParseSingleEmployee(&employee),nil
 }

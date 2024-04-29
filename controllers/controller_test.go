@@ -96,7 +96,7 @@ func TestEmployeeControllerImpl_Delete(t *testing.T){
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.DeleteHandler)
+	handler := http.HandlerFunc(controller.GetAllHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)

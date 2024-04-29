@@ -9,6 +9,7 @@ CREATE TABLE employees (
   join_date    date      NOT NULL,
   created_date date      NOT NULL,
   updated_date date      DEFAULT NULL,
-  deleted_date date      DEFAULT NULL
+  deleted_date date      DEFAULT NULL,
+  UNIQUE(name)
 );
 END;

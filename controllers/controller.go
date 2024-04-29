@@ -79,8 +79,16 @@ func (e EmployeeControllerImpl) CreateHandler(w http.ResponseWriter, r *http.Req
 	fmt.Println(dto)
 	employee,err := e.EmpService.CreateEmployees(context.Background(), dto)
 	if err != nil {
-		w.WriteHeader(500)
-		fmt.Fprintf(w,"Internal Server Error")
+		if err.Error() == "duplicate name"{
+			w.WriteHeader(400)
+			fmt.Fprintf(w,"Bad request:Duplcate name")
+			return
+		}else{
+			w.WriteHeader(500)
+			fmt.Println(err.Error())
+			fmt.Fprintf(w,"Internal Server Error")
+			return
+		}
 	}
 	empJson, err := json.Marshal(employee)
 	if err != nil {
@@ -98,12 +106,12 @@ func (e EmployeeControllerImpl) UpdateHandler(w http.ResponseWriter, r *http.Req
 	err := decoder.Decode(&dto)
 	if err != nil {
 		w.WriteHeader(400)
-		fmt.Fprintf(w,"Bad Request")
+		fmt.Fprintf(w,"Bad Request:No ")
 	}
 	employee,err := e.EmpService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
 	if err != nil {
 		if(err.Error() == "no rows in result set"){
-			w.WriteHeader(400)
+			w.WriteHeader(404)
 			fmt.Fprintf(w,"User not found")
 		}else{
 			w.WriteHeader(500)
@@ -128,7 +136,7 @@ func (e EmployeeControllerImpl) DeleteHandler(w http.ResponseWriter, r *http.Req
 	employees,err := e.EmpService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil{
 		if(err.Error() == "no rows in result set"){
-			w.WriteHeader(400)
+			w.WriteHeader(404)
 			fmt.Fprintf(w,"User not found")
 			return
 		}else{

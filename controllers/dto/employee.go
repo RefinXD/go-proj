@@ -5,10 +5,10 @@ import(
 )
 
 type EmployeeDTO struct{
-	Name        string
-	Dob         time.Time
-	Department  string
-	JobTitle    string
-	Address     string
-	JoinDate    time.Time
+	Name        string		`validate:"required"`
+	Dob         time.Time	`validate:"required"`
+	Department  string		`validate:"required"`
+	JobTitle    string		`validate:"required"`
+	Address     string		`validate:"required"`
+	JoinDate    time.Time	`validate:"required"`
 }
