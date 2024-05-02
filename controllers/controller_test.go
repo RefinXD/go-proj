@@ -34,14 +34,14 @@ func (ms MockTestService) DeleteEmployee(ctx context.Context,id string) (emps *m
 }
 
 func TestEmployeeControllerImpl_GetAll(t *testing.T){
-	controller := new(controllers.EmployeeControllerImpl)
-	controller.EmpService = new(MockTestService)
+	service := new(MockTestService)
+	empController := controllers.NewEmployeeHandler(service)
 	req, err := http.NewRequest(http.MethodGet, "/api/employees", nil)
 	if err != nil {
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.GetAllHandler)
+	handler := http.HandlerFunc(empController.GetAllHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)
@@ -49,54 +49,54 @@ func TestEmployeeControllerImpl_GetAll(t *testing.T){
 
 
 func TestEmployeeControllerImpl_Get(t *testing.T){
-	controller := new(controllers.EmployeeControllerImpl)
-	controller.EmpService = new(MockTestService)
+	service := new(MockTestService)
+	empController := controllers.NewEmployeeHandler(service)
 	req, err := http.NewRequest(http.MethodGet, "/api/employees/3", nil)
 	if err != nil {
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.GetHandler)
+	handler := http.HandlerFunc(empController.GetHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)
 }
 func TestEmployeeControllerImpl_Create(t *testing.T){
-	controller := new(controllers.EmployeeControllerImpl)
-	controller.EmpService = new(MockTestService)
+	service := new(MockTestService)
+	empController := controllers.NewEmployeeHandler(service)
 	req, err := http.NewRequest(http.MethodGet, "/api/employees", nil)
 	if err != nil {
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.CreateHandler)
+	handler := http.HandlerFunc(empController.CreateHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)
 }
 func TestEmployeeControllerImpl_Update(t *testing.T){
-	controller := new(controllers.EmployeeControllerImpl)
-	controller.EmpService = new(MockTestService)
+	service := new(MockTestService)
+	empController := controllers.NewEmployeeHandler(service)
 	req, err := http.NewRequest(http.MethodGet, "/api/employees", nil)
 	if err != nil {
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.UpdateHandler)
+	handler := http.HandlerFunc(empController.UpdateHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)
 }
 
 func TestEmployeeControllerImpl_Delete(t *testing.T){
-	controller := new(controllers.EmployeeControllerImpl)
-	controller.EmpService = new(MockTestService)
+	service := new(MockTestService)
+	empController := controllers.NewEmployeeHandler(service)
 	req, err := http.NewRequest(http.MethodGet, "/api/employees", nil)
 	if err != nil {
 	t.Error(err)
 	}
 	resp := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.GetAllHandler)
+	handler := http.HandlerFunc(empController.GetAllHandler)
 	handler.ServeHTTP(resp,req)
 	assert.NoError(t,err)
 	assert.Equal(t,http.StatusOK,resp.Code)

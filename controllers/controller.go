@@ -12,29 +12,30 @@ import (
 )
 
 // do we really need this?
-type EmployeeController interface{
+type Handler interface{
 	GetAllHandler(w http.ResponseWriter, r *http.Request)
 	GetHandler(w http.ResponseWriter, r *http.Request)
 	CreateHandler(w http.ResponseWriter, r *http.Request)
 	UpdateHandler(w http.ResponseWriter, r *http.Request) 
 	DeleteHandler(w http.ResponseWriter, r *http.Request)
+	SetRouter(r chi.Router)
 }
 
 
-type EmployeeControllerImpl struct {
+type EmployeeHandler struct {
 	// make private
-	EmpService service.EmployeeService
+	empService service.EmployeeService
 }
 
-func NewEmployeeController(service service.EmployeeService) EmployeeControllerImpl {
-	return EmployeeControllerImpl{
-		EmpService: service,
+func NewEmployeeHandler(service service.EmployeeService) EmployeeHandler {
+	return EmployeeHandler{
+		empService: service,
 	}
 }
 
 // what is the difference between (e EmployeeControllerImpl) and (e *EmployeeControllerImpl) --> research this
-func (e EmployeeControllerImpl) GetAllHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.EmpService.GetAllEmployees(context.Background())
+func (e EmployeeHandler) GetAllHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.empService.GetAllEmployees(context.Background())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // please use constant
 		fmt.Fprintf(w,"Internal Server Error")
@@ -42,23 +43,23 @@ func (e EmployeeControllerImpl) GetAllHandler(w http.ResponseWriter, r *http.Req
 	}
 	empJson, err := json.Marshal(employees)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w,"Internal Server Error")
 		return
 	}
 	w.Write(empJson)
 }
 
-func (e EmployeeControllerImpl) GetHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.EmpService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
+func (e EmployeeHandler) GetHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.empService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil {
 		if(err.Error() == "no rows in result set"){	// don't do this
 			// 1. for error comparison use errors.Is(err, errTarget)
 			// 2. don't introduce dependecy between multiple layers: this is pg specific error
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w,"User not found")
 		}else{
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Println(err)
 			fmt.Fprintf(w,"Internal Server Error")
 		}
@@ -66,29 +67,29 @@ func (e EmployeeControllerImpl) GetHandler(w http.ResponseWriter, r *http.Reques
 	}
 	empJson, err := json.Marshal(employees)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w,"Internal Server Error")
 	}
 	w.Write(empJson)
 }
-func (e EmployeeControllerImpl) CreateHandler(w http.ResponseWriter, r *http.Request) {
+func (e EmployeeHandler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.EmployeeDTO	// don't shadow same variable name with package name
 	fmt.Println(r.Body)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&dto)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w,"Bad Request")
 	}
 	fmt.Println(dto)
-	employee,err := e.EmpService.CreateEmployees(context.Background(), dto)
+	employee,err := e.empService.CreateEmployees(context.Background(), dto)
 	if err != nil {
 		if err.Error() == "duplicate name"{
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w,"Bad request:Duplcate name")
 			return
 		}else{
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Println(err.Error())
 			fmt.Fprintf(w,"Internal Server Error")
 			return
@@ -96,29 +97,29 @@ func (e EmployeeControllerImpl) CreateHandler(w http.ResponseWriter, r *http.Req
 	}
 	empJson, err := json.Marshal(employee)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w,"Internal Server Error")
 	}
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusCreated)
 	w.Write(empJson)
 
 }
 
-func (e EmployeeControllerImpl) UpdateHandler(w http.ResponseWriter, r *http.Request) {
+func (e EmployeeHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	var dto dto.EmployeeDTO
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&dto)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w,"Bad Request:No ")
 	}
-	employee,err := e.EmpService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
+	employee,err := e.empService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
 	if err != nil {
 		if(err.Error() == "no rows in result set"){
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w,"User not found")
 		}else{
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Println(err)
 			fmt.Fprintf(w,"Internal Server Error")
 		}
@@ -126,25 +127,25 @@ func (e EmployeeControllerImpl) UpdateHandler(w http.ResponseWriter, r *http.Req
 	}
 	empJson, err := json.Marshal(employee)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w,"Internal Server Error")
 		return
 	}
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write(empJson)
 
 }
 
 
-func (e EmployeeControllerImpl) DeleteHandler(w http.ResponseWriter, r *http.Request) {
-	employees,err := e.EmpService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
+func (e EmployeeHandler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	employees,err := e.empService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil{
 		if(err.Error() == "no rows in result set"){
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w,"User not found")
 			return
 		}else{
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Println(err)
 			fmt.Fprintf(w,"Internal Server Error")
 			return
@@ -152,18 +153,19 @@ func (e EmployeeControllerImpl) DeleteHandler(w http.ResponseWriter, r *http.Req
 	}
 	empJson, err := json.Marshal(employees)
 	if err != nil || empJson != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Println(err)
 		fmt.Fprintf(w,"Internal Server Error")
 		return
 	}
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w,"Deleted successfully")
 }
 
 
 
 
-func (e EmployeeControllerImpl) SetRouter(r chi.Router) {
+func (e EmployeeHandler) SetRouter(r chi.Router) {
 	r.Get("/employees", e.GetAllHandler)
 	r.Get("/employee/{id}",e.GetHandler)
 	r.Post("/employee", e.CreateHandler)

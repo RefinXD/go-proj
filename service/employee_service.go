@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/RefinXD/go-proj/controllers/dto"
-	"github.com/RefinXD/go-proj/database/connection"
 	"github.com/RefinXD/go-proj/database"
 	"github.com/RefinXD/go-proj/database/models"
 	"github.com/RefinXD/go-proj/utils"
@@ -43,18 +41,12 @@ type EmployeeServiceImpl struct{
 	conn *pgx.Conn
 }
 
-func Instantiate() (service EmployeeServiceImpl) {
-	// move database init to main
-	service = *new(EmployeeServiceImpl)
-	conn , err := connection.ConnectToDB()
-	service.Db = database.New(conn)
-	service.conn = conn
-	
-	if err != nil{
-		log.Fatal(err)
+func NewEmployeeService(db Database) EmployeeServiceImpl {
+	return EmployeeServiceImpl{
+		Db: db,
 	}
-	return service
 }
+
 
 func (e EmployeeServiceImpl) GetAllEmployees(ctx context.Context) ( []models.Employee, error)  {
 	employees,err := e.Db.ListEmployees(ctx)
