@@ -11,17 +11,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// do we really need this?
 type EmployeeController interface{
 	GetAllHandler(w http.ResponseWriter, r *http.Request)
 	GetHandler(w http.ResponseWriter, r *http.Request)
 	CreateHandler(w http.ResponseWriter, r *http.Request)
 	UpdateHandler(w http.ResponseWriter, r *http.Request) 
 	DeleteHandler(w http.ResponseWriter, r *http.Request)
-
 }
 
 
 type EmployeeControllerImpl struct {
+	// make private
 	EmpService service.EmployeeService
 }
 
@@ -31,18 +32,19 @@ func NewEmployeeController(service service.EmployeeService) EmployeeControllerIm
 	}
 }
 
+// what is the difference between (e EmployeeControllerImpl) and (e *EmployeeControllerImpl) --> research this
 func (e EmployeeControllerImpl) GetAllHandler(w http.ResponseWriter, r *http.Request) {
 	employees,err := e.EmpService.GetAllEmployees(context.Background())
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError) // please use constant
 		fmt.Fprintf(w,"Internal Server Error")
-		return;
+		return
 	}
 	empJson, err := json.Marshal(employees)
 	if err != nil {
 		w.WriteHeader(500)
 		fmt.Fprintf(w,"Internal Server Error")
-		return;
+		return
 	}
 	w.Write(empJson)
 }
@@ -50,7 +52,9 @@ func (e EmployeeControllerImpl) GetAllHandler(w http.ResponseWriter, r *http.Req
 func (e EmployeeControllerImpl) GetHandler(w http.ResponseWriter, r *http.Request) {
 	employees,err := e.EmpService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil {
-		if(err.Error() == "no rows in result set"){
+		if(err.Error() == "no rows in result set"){	// don't do this
+			// 1. for error comparison use errors.Is(err, errTarget)
+			// 2. don't introduce dependecy between multiple layers: this is pg specific error
 			w.WriteHeader(404)
 			fmt.Fprintf(w,"User not found")
 		}else{
@@ -68,7 +72,7 @@ func (e EmployeeControllerImpl) GetHandler(w http.ResponseWriter, r *http.Reques
 	w.Write(empJson)
 }
 func (e EmployeeControllerImpl) CreateHandler(w http.ResponseWriter, r *http.Request) {
-	var dto dto.EmployeeDTO
+	var dto dto.EmployeeDTO	// don't shadow same variable name with package name
 	fmt.Println(r.Body)
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&dto)

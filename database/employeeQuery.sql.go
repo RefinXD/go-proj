@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: employeeQuery.sql
 
-package employee_queries
+package database
 
 import (
 	"context"

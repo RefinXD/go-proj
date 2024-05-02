@@ -18,7 +18,10 @@ func main() {
         w.Write([]byte("Hello World!"))
 
     })
-    api_router := router.InitRouter()
+    // init database layer, database := pg.New...
+    // init service layer, service.New(database)
+    // for proper dependency injection 
+    api_router := router.InitRouter() // go convention : no snake_case, router.New(empService)
     r.Mount("/api",api_router)
     fmt.Println("starting")
     http.ListenAndServe(":3000", r)

@@ -9,7 +9,7 @@ import (
 
 	"github.com/RefinXD/go-proj/controllers/dto"
 	"github.com/RefinXD/go-proj/database/connection"
-	"github.com/RefinXD/go-proj/database/employee_queries"
+	"github.com/RefinXD/go-proj/database"
 	"github.com/RefinXD/go-proj/database/models"
 	"github.com/RefinXD/go-proj/utils"
 	"github.com/go-playground/validator/v10"
@@ -28,32 +28,35 @@ type EmployeeService interface{
 
 
 type Database interface{
-	CreateEmployee(ctx context.Context, arg employee_queries.CreateEmployeeParams) (employee_queries.Employee, error)
+	CreateEmployee(ctx context.Context, arg database.CreateEmployeeParams) (database.Employee, error)
 	DeleteEmployee(ctx context.Context, id int64) error
-	GetEmployee(ctx context.Context, id int64) (employee_queries.Employee, error)
-	ListEmployees(ctx context.Context) ([]employee_queries.Employee, error)
-	UpdateEmployee(ctx context.Context, arg employee_queries.UpdateEmployeeParams) (employee_queries.Employee, error)
-	WithTx(tx pgx.Tx) *employee_queries.Queries
+	GetEmployee(ctx context.Context, id int64) (database.Employee, error)
+	ListEmployees(ctx context.Context) ([]database.Employee, error)
+	UpdateEmployee(ctx context.Context, arg database.UpdateEmployeeParams) (database.Employee, error)
+	WithTx(tx pgx.Tx) *database.Queries
 
 }
 
 
 type EmployeeServiceImpl struct{
 	Db Database
+	conn *pgx.Conn
 }
 
 func Instantiate() (service EmployeeServiceImpl) {
+	// move database init to main
 	service = *new(EmployeeServiceImpl)
 	conn , err := connection.ConnectToDB()
-	service.Db = employee_queries.New(conn)
+	service.Db = database.New(conn)
+	service.conn = conn
+	
 	if err != nil{
 		log.Fatal(err)
 	}
 	return service
 }
 
-func (e EmployeeServiceImpl) GetAllEmployees(ctx context.Context) (emps []models.Employee,err error)  {
-	
+func (e EmployeeServiceImpl) GetAllEmployees(ctx context.Context) ( []models.Employee, error)  {
 	employees,err := e.Db.ListEmployees(ctx)
 	if err != nil{
 		return nil,err
@@ -63,7 +66,6 @@ func (e EmployeeServiceImpl) GetAllEmployees(ctx context.Context) (emps []models
 }
 
 func (e EmployeeServiceImpl) GetEmployee(ctx context.Context,id string) (emps *models.Employee,err error)  {
-	
 	int_id,err := strconv.Atoi(id)
 	if err != nil{
 		return nil,err
@@ -94,7 +96,7 @@ func (e EmployeeServiceImpl) CreateEmployees(ctx context.Context,data dto.Employ
 			return nil,err
 	}
 }
-	employee,err := e.Db.CreateEmployee(ctx,employee_queries.CreateEmployeeParams{
+	employee,err := e.Db.CreateEmployee(ctx,database.CreateEmployeeParams{
 		Name: data.Name,
 		Dob: *utils.TimeToPgDate(&data.Dob),
 		Department: data.Department,
@@ -115,12 +117,18 @@ func (e EmployeeServiceImpl) CreateEmployees(ctx context.Context,data dto.Employ
 
 
 func (e EmployeeServiceImpl) UpdateEmployee(ctx context.Context,data dto.EmployeeDTO,id string) (emp *models.Employee,err error)  {
-	
+	// one solution for this is to introduce a 'database' layer on top of sqlc
+	tx,err := e.conn.Begin(ctx)
+	if err != nil {
+		return nil,err
+	}
 	int_id,err := strconv.Atoi(id);
 	if err != nil{
 		return nil,err
 	}
-	queried_emp,err := e.Db.GetEmployee(ctx,int64(int_id));
+	defer tx.Rollback(ctx);
+	qtx := e.Db.WithTx(tx)
+	queried_emp,err := qtx.GetEmployee(ctx,int64(int_id));
 	if err != nil{
 		return nil,err
 	}
@@ -128,11 +136,12 @@ func (e EmployeeServiceImpl) UpdateEmployee(ctx context.Context,data dto.Employe
 	parsed_emp := utils.RemoveEmptyDataToArgs(data,*utils.ParseSingleEmployee(&queried_emp))
 
 	parsed_emp.ID = int64(int_id)
-	employee,err := e.Db.UpdateEmployee(ctx,parsed_emp)
+	employee,err := qtx.UpdateEmployee(ctx,parsed_emp)
 	if err != nil{
 		fmt.Println(err.Error())
 		return nil,err
 	}
+	tx.Commit(ctx);
 	return utils.ParseSingleEmployee(&employee),nil
 }
 

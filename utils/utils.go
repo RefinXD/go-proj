@@ -4,14 +4,14 @@ import (
 	"time"
 
 	"github.com/RefinXD/go-proj/controllers/dto"
-	"github.com/RefinXD/go-proj/database/employee_queries"
+ 	"github.com/RefinXD/go-proj/database"
 	"github.com/RefinXD/go-proj/database/models"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 
 //Used to parse database query results into structs to be returned
-func ParseEmployees(dbEmps *[]employee_queries.Employee) (emps *[]models.Employee){
+func ParseEmployees(dbEmps *[]database.Employee) (emps *[]models.Employee){
 	empArray := []models.Employee{}
 	for _, element := range *dbEmps {
 		temp_employee := models.Employee{
@@ -29,7 +29,7 @@ func ParseEmployees(dbEmps *[]employee_queries.Employee) (emps *[]models.Employe
 }
 
 //Used to parse a single database query result into structs to be returned
-func ParseSingleEmployee(dbEmps *employee_queries.Employee) (emps *models.Employee){
+func ParseSingleEmployee(dbEmps *database.Employee) (emps *models.Employee){
 	employee := models.Employee{
 			ID : dbEmps.ID,
 			Name: dbEmps.Name,
@@ -60,9 +60,9 @@ func TimeToPgDate(t *time.Time) *pgtype.Date {
 
 //This function is to select between the current data in the database(currentData) and the incoming update data.
 //If the incoming data is an empty string/default date time, the current data is selected
-func RemoveEmptyDataToArgs (data dto.EmployeeDTO,currentData models.Employee ) (emp employee_queries.UpdateEmployeeParams){
+func RemoveEmptyDataToArgs (data dto.EmployeeDTO,currentData models.Employee ) (emp database.UpdateEmployeeParams){
 	
-	emp = employee_queries.UpdateEmployeeParams{}
+	emp = database.UpdateEmployeeParams{}
 	if data.Name != ""{
 		emp.Name = data.Name
 	}else{
