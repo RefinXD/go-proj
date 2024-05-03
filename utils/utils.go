@@ -44,6 +44,18 @@ func ParseSingleEmployee(dbEmps *database.Employee) (emps *models.Employee){
 	return &employee
 }
 
+func ParseEmployeeDTO(dto *dto.EmployeeDTO) (*database.CreateEmployeeParams){
+	employee := database.CreateEmployeeParams{
+			Name: dto.Name,
+			Department: dto.Department,
+			JobTitle: dto.JobTitle,
+			Address: dto.Address,
+			Dob: *TimeToPgDate(&dto.Dob),
+			JoinDate: *TimeToPgDate(&dto.JoinDate),
+		}
+	return &employee
+}
+
 //Converts time.Time to a pgtype.date, used for parsing date from postman
 func TimeToPgDate(t *time.Time) *pgtype.Date {
 	if t == nil{

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -21,7 +22,8 @@ type Handler interface{
 	SetRouter(r chi.Router)
 }
 
-
+const NOT_FOUND_ERR = "not found"
+const DUPLICATE_NAME_ERR = "duplicate name"
 type EmployeeHandler struct {
 	// make private
 	empService service.EmployeeService
@@ -53,7 +55,7 @@ func (e EmployeeHandler) GetAllHandler(w http.ResponseWriter, r *http.Request) {
 func (e EmployeeHandler) GetHandler(w http.ResponseWriter, r *http.Request) {
 	employees,err := e.empService.GetEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil {
-		if(err.Error() == "no rows in result set"){	// don't do this
+		if(errors.Is(err,errors.New(NOT_FOUND_ERR))){	// don't do this
 			// 1. for error comparison use errors.Is(err, errTarget)
 			// 2. don't introduce dependecy between multiple layers: this is pg specific error
 			w.WriteHeader(http.StatusNotFound)
@@ -73,18 +75,17 @@ func (e EmployeeHandler) GetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(empJson)
 }
 func (e EmployeeHandler) CreateHandler(w http.ResponseWriter, r *http.Request) {
-	var dto dto.EmployeeDTO	// don't shadow same variable name with package name
+	var empDto dto.EmployeeDTO	// don't shadow same variable name with package name
 	fmt.Println(r.Body)
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&dto)
+	err := decoder.Decode(&empDto)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w,"Bad Request")
 	}
-	fmt.Println(dto)
-	employee,err := e.empService.CreateEmployees(context.Background(), dto)
+	employee,err := e.empService.CreateEmployees(context.Background(), empDto)
 	if err != nil {
-		if err.Error() == "duplicate name"{
+		if errors.Is(err,errors.New(DUPLICATE_NAME_ERR)){
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w,"Bad request:Duplcate name")
 			return
@@ -115,7 +116,7 @@ func (e EmployeeHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	employee,err := e.empService.UpdateEmployee(context.Background(), dto,chi.URLParam(r,"id"))
 	if err != nil {
-		if(err.Error() == "no rows in result set"){
+		if(errors.Is(err,errors.New(NOT_FOUND_ERR))){
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w,"User not found")
 		}else{
@@ -140,7 +141,7 @@ func (e EmployeeHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 func (e EmployeeHandler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	employees,err := e.empService.DeleteEmployee(context.Background(),chi.URLParam(r,"id"))
 	if err != nil{
-		if(err.Error() == "no rows in result set"){
+		if(errors.Is(err,errors.New(NOT_FOUND_ERR))){
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w,"User not found")
 			return

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/RefinXD/go-proj/controllers"
-	"github.com/RefinXD/go-proj/database"
 	"github.com/RefinXD/go-proj/database/connection"
 	"github.com/RefinXD/go-proj/router"
 	"github.com/RefinXD/go-proj/service"
@@ -22,11 +21,8 @@ func main() {
         w.Write([]byte("Hello World!"))
 
     })
-    conn,err := connection.ConnectToDB()
-    if err != nil{
-        fmt.Println(err)
-    }
-    empService := service.NewEmployeeService(database.New(conn))
+    empRepo := connection.Instantiate()
+    empService := service.NewEmployeeService(empRepo)
     empHanlder := controllers.NewEmployeeHandler(empService)
     handlers := []controllers.Handler{}
     handlers = append(handlers, empHanlder)

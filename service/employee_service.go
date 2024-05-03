@@ -7,11 +7,10 @@ import (
 	"strconv"
 
 	"github.com/RefinXD/go-proj/controllers/dto"
-	"github.com/RefinXD/go-proj/database"
+	"github.com/RefinXD/go-proj/database/connection"
 	"github.com/RefinXD/go-proj/database/models"
 	"github.com/RefinXD/go-proj/utils"
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -25,35 +24,23 @@ type EmployeeService interface{
 
 
 
-type Database interface{
-	CreateEmployee(ctx context.Context, arg database.CreateEmployeeParams) (database.Employee, error)
-	DeleteEmployee(ctx context.Context, id int64) error
-	GetEmployee(ctx context.Context, id int64) (database.Employee, error)
-	ListEmployees(ctx context.Context) ([]database.Employee, error)
-	UpdateEmployee(ctx context.Context, arg database.UpdateEmployeeParams) (database.Employee, error)
-	WithTx(tx pgx.Tx) *database.Queries
-
-}
-
-
 type EmployeeServiceImpl struct{
-	Db Database
-	conn *pgx.Conn
+	repo connection.EmployeeRepository
 }
 
-func NewEmployeeService(db Database) EmployeeServiceImpl {
+func NewEmployeeService(repository connection.EmployeeRepository) EmployeeServiceImpl {
 	return EmployeeServiceImpl{
-		Db: db,
+		repo: repository,
 	}
 }
 
-
+//move all of the database related functionalities to the database files
 func (e EmployeeServiceImpl) GetAllEmployees(ctx context.Context) ( []models.Employee, error)  {
-	employees,err := e.Db.ListEmployees(ctx)
+	employees,err := e.repo.ListEmployees(ctx)
 	if err != nil{
 		return nil,err
 	}
-	parsedEmps := utils.ParseEmployees(&employees)
+	parsedEmps := utils.ParseEmployees(employees)
 	return *parsedEmps,nil
 }
 
@@ -62,11 +49,11 @@ func (e EmployeeServiceImpl) GetEmployee(ctx context.Context,id string) (emps *m
 	if err != nil{
 		return nil,err
 	}
-	employees,err := e.Db.GetEmployee(ctx,int64(int_id))
+	employees,err := e.repo.GetEmployee(ctx,int64(int_id))
 	if err != nil{
 		return nil,err
 	}
-	parsedEmps := utils.ParseSingleEmployee(&employees)
+	parsedEmps := utils.ParseSingleEmployee(employees)
 	return parsedEmps,nil
 }
 
@@ -88,53 +75,30 @@ func (e EmployeeServiceImpl) CreateEmployees(ctx context.Context,data dto.Employ
 			return nil,err
 	}
 }
-	employee,err := e.Db.CreateEmployee(ctx,database.CreateEmployeeParams{
-		Name: data.Name,
-		Dob: *utils.TimeToPgDate(&data.Dob),
-		Department: data.Department,
-		JobTitle: data.JobTitle,
-		Address: data.Address,
-		JoinDate: *utils.TimeToPgDate(&data.JoinDate),
-		
-	})
+	employee,err := e.repo.CreateEmployee(ctx,data)
 	if err != nil{
 		fmt.Println(err.Error())
 		var e *pgconn.PgError
-		if errors.As(err,&e) && e.Code == "23505"{
+		if errors.As(err,&e) && e.Code == "123"{
 			return nil,errors.New("duplicate name")
 		}
 	}
-	return utils.ParseSingleEmployee(&employee),nil
+	return utils.ParseSingleEmployee(employee),nil
 }
 
 
 func (e EmployeeServiceImpl) UpdateEmployee(ctx context.Context,data dto.EmployeeDTO,id string) (emp *models.Employee,err error)  {
 	// one solution for this is to introduce a 'database' layer on top of sqlc
-	tx,err := e.conn.Begin(ctx)
-	if err != nil {
-		return nil,err
-	}
-	int_id,err := strconv.Atoi(id);
+	int_id,err := strconv.Atoi(id)
 	if err != nil{
 		return nil,err
 	}
-	defer tx.Rollback(ctx);
-	qtx := e.Db.WithTx(tx)
-	queried_emp,err := qtx.GetEmployee(ctx,int64(int_id));
-	if err != nil{
-		return nil,err
-	}
-	
-	parsed_emp := utils.RemoveEmptyDataToArgs(data,*utils.ParseSingleEmployee(&queried_emp))
-
-	parsed_emp.ID = int64(int_id)
-	employee,err := qtx.UpdateEmployee(ctx,parsed_emp)
+	employee,err := e.repo.UpdateEmployee(ctx,data,int64(int_id))
 	if err != nil{
 		fmt.Println(err.Error())
 		return nil,err
 	}
-	tx.Commit(ctx);
-	return utils.ParseSingleEmployee(&employee),nil
+	return utils.ParseSingleEmployee(employee),nil
 }
 
 func (e EmployeeServiceImpl) DeleteEmployee(ctx context.Context,id string) (emps *models.Employee,err error)  {
@@ -144,13 +108,13 @@ func (e EmployeeServiceImpl) DeleteEmployee(ctx context.Context,id string) (emps
 	if err != nil{
 		return nil,err
 	}
-	queried_emp,err := e.Db.GetEmployee(ctx,int64(int_id));
+	queried_emp,err := e.repo.GetEmployee(ctx,int64(int_id));
 	if err != nil{
 		return nil,err
 	}
-	err = e.Db.DeleteEmployee(ctx,int64(int_id))
+	err = e.repo.Db.DeleteEmployee(ctx,int64(int_id))
 	if err != nil{
 		return nil,err
 	}
-	return utils.ParseSingleEmployee(&queried_emp),nil
+	return utils.ParseSingleEmployee(queried_emp),nil
 }
